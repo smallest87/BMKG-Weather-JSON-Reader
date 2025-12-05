@@ -259,6 +259,32 @@
             }
             return results.sort((a, b) => a.rawDate - b.rawDate);
         }
+
+        // --- WEBSOCKET LOGIC ---
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+        ws.onopen = () => {
+            console.log("Connected to WebSocket Server");
+        };
+
+        ws.onerror = (error) => {
+            console.error("WebSocket Error:", error);
+            // Fallback jika dibuka tanpa server.py (misal klik file langsung)
+            if(window.location.protocol === 'file:') {
+                alert("Fitur Overlay membutuhkan server.py. Jalankan server terlebih dahulu.");
+            }
+        };
+
+        function broadcastData(encodedJson) {
+            if (ws.readyState === WebSocket.OPEN) {
+                // Decode string URI component kembali ke JSON string biasa
+                const decodedJson = decodeURIComponent(encodedJson);
+                ws.send(decodedJson);
+                console.log("Sent to overlay:", decodedJson);
+            } else {
+                console.warn("WebSocket not open");
+            }
+        }
     </script>
 </body>
 </html>

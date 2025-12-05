@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Weather Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+
+        body {
+            margin: 0; padding: 0;
+            background-color: transparent; /* Transparan untuk OBS */
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end; /* Posisi di bawah (Lower Third) */
+            height: 100vh;
+            padding-bottom: 50px;
+            box-sizing: border-box;
+        }
+
+        #overlayCard {
+            background: rgba(255, 255, 255, 0.95);
+            width: 800px;
+            height: 180px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            gap: 30px;
+            border-left: 15px solid #bdc3c7; /* Warna default */
+            transform: translateY(200%); /* Sembunyi di bawah */
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        #overlayCard.show {
+            transform: translateY(0); /* Muncul */
+        }
+
+        /* Bagian Icon & Suhu */
+        .left-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            min-width: 220px;
+        }
+
+        .ov-icon img { width: 100px; height: 100px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+        .ov-icon div { font-size: 4em; } /* Untuk Emoji */
+        
+        .ov-temp {
+            font-size: 4em;
+            font-weight: 700;
+            color: #2c3e50;
+            line-height: 1;
+        }
+
+        /* Bagian Detail Text */
+        .right-section {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .ov-location {
+            font-size: 1.2em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .ov-condition {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .ov-details {
+            display: flex;
+            gap: 20px;
+            font-size: 1.1em;
+            color: #555;
+            background: #f0f2f5;
+            padding: 8px 15px;
+            border-radius: 10px;
+            width: fit-content;
+        }
+
+        /* Warna Border Dinamis */
+        .border-rain { border-left-color: #3498db !important; }
+        .border-cloudy { border-left-color: #95a5a6 !important; }
+        .border-sunny { border-left-color: #f1c40f !important; }
+        .border-clear { border-left-color: #f39c12 !important; }
+        .border-thunder { border-left-color: #8e44ad !important; }
+    </style>
+</head>
+<body>
+
+    <div id="overlayCard">
+        <div class="left-section">
+            <div class="ov-icon" id="ovIcon"></div>
+            <div class="ov-temp" id="ovTemp">--°</div>
+        </div>
+        <div class="right-section">
+            <div class="ov-location" id="ovTime">--:-- WIB</div>
+            <div class="ov-condition" id="ovCondition">Menunggu Data...</div>
+            <div class="ov-details">
+                <span id="ovWind">💨 --</span>
+                <span id="ovHumidity">💧 --</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const card = document.getElementById('overlayCard');
+        let hideTimeout;
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateOverlay(data);
+        };
+
+        function updateOverlay(data) {
+            // 1. Reset Animasi
+            card.classList.remove('show');
+            clearTimeout(hideTimeout);
+
+            // Delay sedikit untuk update konten saat tersembunyi (jika sedang tampil)
+            setTimeout(() => {
+                // 2. Isi Konten
+                document.getElementById('ovTemp').innerText = data.temp + '°';
+                document.getElementById('ovCondition').innerText = data.condition;
+                document.getElementById('ovTime').innerText = data.dateStr.split(',')[0] + ', ' + data.timeStr + ' WIB';
+                document.getElementById('ovWind').innerText = '💨 ' + data.wind;
+                document.getElementById('ovHumidity').innerText = '💧 ' + data.humidity;
+
+                // Icon logic
+                const iconDiv = document.getElementById('ovIcon');
+                if(data.iconUrl) {
+                    iconDiv.innerHTML = `<img src="${data.iconUrl}">`;
+                } else {
+                    iconDiv.innerHTML = `<div>${getEmoji(data.condition)}</div>`;
+                }
+
+                // Warna Border
+                card.className = ''; // Reset class
+                card.classList.add(getBorderClass(data.condition));
+
+                // 3. Tampilkan
+                card.classList.add('show');
+
+                // 4. Auto hide setelah 15 detik (opsional)
+                hideTimeout = setTimeout(() => {
+                    card.classList.remove('show');
+                }, 15000);
+
+            }, 400); 
+        }
+
+        function getBorderClass(cond) {
+            const c = cond.toLowerCase();
+            if(c.includes('hujan')) return 'border-rain';
+            if(c.includes('cerah')) return 'border-sunny';
+            if(c.includes('berawan')) return 'border-cloudy';
+            if(c.includes('petir')) return 'border-thunder';
+            return 'border-cloudy';
+        }
+
+        function getEmoji(cond) {
+            const c = cond.toLowerCase();
+            if(c.includes('hujan')) return '🌧️';
+            if(c.includes('cerah')) return '☀️';
+            return '☁️';
+        }
+    </script>
+</body>
+</html>
