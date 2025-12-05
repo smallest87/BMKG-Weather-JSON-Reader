@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Cuaca Kabupaten Malang</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Upload Section Style */
+        .upload-container {
+            text-align: center;
+            padding: 40px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto 20px auto;
+        }
+
+        .upload-container h2 { margin-top: 0; }
+        
+        input[type="file"] {
+            margin-top: 15px;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Dashboard Styles (Hidden by default) */
+        #dashboard { display: none; }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        /* Tambahkan ID untuk target update judul */
+        #mainTitle {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .select-wrapper {
+            flex-grow: 1;
+            max-width: 300px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        .region-info {
+            background: var(--secondary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
+        }
+
+        .region-info h2 { margin: 0 0 10px 0; }
+        .region-meta { display: flex; gap: 20px; font-size: 0.9em; opacity: 0.9; }
+
+        /* Forecast Grid */
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .weather-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+            border-left: 5px solid var(--secondary-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .weather-card.rain { border-left-color: var(--secondary-color); }
+        .weather-card.cloudy { border-left-color: #95a5a6; }
+        .weather-card.clear { border-left-color: #f1c40f; }
+
+        .card-header {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .card-date { font-weight: bold; color: var(--primary-color); font-size: 1.1em; display: block;}
+        .card-time { color: #e74c3c; font-weight: bold; }
+
+        .main-weather {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .weather-icon {
+            font-size: 2.5em;
+        }
+
+        .temp-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .condition-text {
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.85em;
+            color: #555;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .detail-item span { display: block; color: #888; font-size: 0.8em; }
+
+        @media (max-width: 600px) {
+            .header-bar { flex-direction: column; align-items: stretch; }
+            .select-wrapper { max-width: 100%; }
+            .region-meta { flex-direction: column; gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-container" id="uploadSection">
+        <h2>📂 Buka Data Cuaca</h2>
+        <p>Silakan pilih file <code>.json</code> yang berisi data cuaca.</p>
+        <input type="file" id="fileInput" accept=".json">
+    </div>
+
+    <div id="dashboard">
+        <div class="header-bar">
+            <h3 id="mainTitle">🌤️ Prakiraan Cuaca Kab. Malang</h3>
+            <div class="select-wrapper">
+                <select id="regionSelect">
+                    <option value="">-- Pilih Wilayah --</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="contentArea">
+            <div id="regionInfo" class="region-info" style="display:none;"></div>
+            <div id="forecastGrid" class="forecast-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let weatherData = [];
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    weatherData = JSON.parse(e.target.result);
+                    initDashboard();
+                } catch (error) {
+                    alert("Error: File JSON tidak valid atau format salah.");
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function initDashboard() {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+
+            const select = document.getElementById('regionSelect');
+            select.innerHTML = '<option value="">-- Pilih Kecamatan/Wilayah --</option>';
+            
+            weatherData.sort((a, b) => a.wilayah.localeCompare(b.wilayah));
+
+            weatherData.forEach((item, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = item.wilayah;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', (e) => {
+                const titleElement = document.getElementById('mainTitle');
+                if(e.target.value !== "") {
+                    renderRegion(weatherData[e.target.value]);
+                } else {
+                    // Reset judul jika tidak ada wilayah dipilih
+                    titleElement.innerText = '🌤️ Prakiraan Cuaca Kab. Malang';
+                    document.getElementById('regionInfo').style.display = 'none';
+                    document.getElementById('forecastGrid').innerHTML = '';
+                }
+            });
+
+            if(weatherData.length > 0) {
+                select.value = 0;
+                renderRegion(weatherData[0]);
+            }
+        }
+
+        function renderRegion(data) {
+            const regionInfo = document.getElementById('regionInfo');
+            const forecastGrid = document.getElementById('forecastGrid');
+            const titleElement = document.getElementById('mainTitle');
+            
+            // UPDATE: Ubah judul halaman sesuai wilayah yang dipilih
+            titleElement.innerText = `🌤️ Prakiraan Cuaca ${data.wilayah}`;
+
+            regionInfo.style.display = 'block';
+            regionInfo.innerHTML = `
+                <h2>📍 ${data.wilayah}</h2>
+                <div class="region-meta">
+                    <div>Kecamatan: ${data.administrasi.kecamatan}</div>
+                    <div>Koordinat: ${data.administrasi.lat}, ${data.administrasi.lon}</div>
+                    <div>Zona Waktu: ${data.administrasi.timezone}</div>
+                </div>
+            `;
+
+            forecastGrid.innerHTML = '';
+            
+            data.prakiraan.forEach(forecast => {
+                const card = document.createElement('div');
+                card.className = `weather-card ${getWeatherClass(forecast.kondisi)}`;
+                
+                const dateObj = new Date(forecast.waktu_lokal);
+                const dateStr = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
+                const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const icon = getWeatherIcon(forecast.kondisi);
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-date">${dateStr}</span>
+                        <span class="card-time">🕒 ${timeStr} WIB</span>
+                    </div>
+                    <div class="main-weather">
+                        <div class="weather-icon">${icon}</div>
+                        <div class="temp-display">${forecast.suhu_max}°C</div>
+                    </div>
+                    <div class="condition-text">${forecast.kondisi}</div>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span>Suhu Min</span>
+                            ${forecast.suhu_min}°C
+                        </div>
+                        <div class="detail-item">
+                            <span>Kelembapan</span>
+                            ${forecast.kelembapan_min}% - ${forecast.kelembapan_max}%
+                        </div>
+                        <div class="detail-item">
+                            <span>Angin</span>
+                            ${forecast.arah_angin} (${forecast.kecepatan_angin} km/j)
+                        </div>
+                        <div class="detail-item">
+                            <span>Visibilitas</span>
+                            ${(forecast.vs / 1000).toFixed(1)} km
+                        </div>
+                    </div>
+                `;
+                forecastGrid.appendChild(card);
+            });
+        }
+
+        function getWeatherIcon(condition) {
+            const c = condition.toLowerCase();
+            if (c.includes('hujan')) return '🌧️';
+            if (c.includes('berawan')) return '☁️';
+            if (c.includes('cerah')) return '☀️';
+            if (c.includes('kabut') || c.includes('asap') || c.includes('kabur')) return '🌫️';
+            if (c.includes('petir')) return '⚡';
+            return '🌤️';
+        }
+
+        function getWeatherClass(condition) {
+            const c = condition.toLowerCase();
+            if (c.includes('hujan')) return 'rain';
+            if (c.includes('berawan')) return 'cloudy';
+            if (c.includes('kabut')) return 'cloudy';
+            return 'clear';
+        }
+    </script>
+</body>
+</html>
