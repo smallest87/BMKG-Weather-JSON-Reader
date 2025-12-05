@@ -96,6 +96,36 @@
             .weather-list-item { flex-direction: column; align-items: flex-start; }
             .list-right { width: 100%; justify-content: space-between; }
         }
+
+        /* --- Styles untuk Grouping Tanggal (Baru) --- */
+        .date-group {
+            margin-bottom: 30px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .date-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 10px;
+            z-index: 10;
+        }
+
+        /* Update sedikit pada card agar tanggal tidak redundan */
+        .card-date { display: none; } /* Sembunyikan tanggal di card karena sudah ada di header */
+        .list-date { display: none; } /* Sembunyikan tanggal di list */
+        
+        /* Animasi halus saat render */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>

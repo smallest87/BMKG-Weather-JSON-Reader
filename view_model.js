@@ -8,24 +8,60 @@ class WeatherViewModel {
         this.viewMode = mode;
     }
 
-    // Fungsi utama untuk merender data ke container
+    // Fungsi utama untuk merender data
     render(containerId, data) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = ''; // Bersihkan container
+        const mainContainer = document.getElementById(containerId);
+        mainContainer.innerHTML = ''; // Bersihkan container utama
+        mainContainer.className = ''; // Reset class container utama
 
-        // Ubah class container agar CSS Grid/Flex menyesuaikan
-        container.className = this.viewMode === 'CARD' ? 'forecast-grid' : 'forecast-list-container';
+        // 1. Kelompokkan Data Berdasarkan Tanggal
+        const groupedData = this._groupByDate(data);
 
-        data.forEach(item => {
-            const htmlString = this.viewMode === 'CARD' 
-                ? this._getCardTemplate(item) 
-                : this._getListTemplate(item);
-            
-            // Konversi string HTML menjadi elemen DOM
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlString.trim();
-            container.appendChild(tempDiv.firstChild);
+        // 2. Loop setiap tanggal (Group)
+        Object.keys(groupedData).forEach(dateKey => {
+            const forecasts = groupedData[dateKey];
+
+            // A. Buat Wrapper per Tanggal
+            const dateGroup = document.createElement('div');
+            dateGroup.className = 'date-group';
+
+            // B. Buat Header Tanggal
+            const dateHeader = document.createElement('h3');
+            dateHeader.className = 'date-header';
+            dateHeader.innerText = dateKey; // Contoh: "Jumat, 05 Desember 2025"
+            dateGroup.appendChild(dateHeader);
+
+            // C. Buat Container Item (Grid atau List)
+            const itemContainer = document.createElement('div');
+            itemContainer.className = this.viewMode === 'CARD' ? 'forecast-grid' : 'forecast-list-container';
+
+            // D. Isi Item ke dalam Container
+            forecasts.forEach(item => {
+                const htmlString = this.viewMode === 'CARD' 
+                    ? this._getCardTemplate(item) 
+                    : this._getListTemplate(item);
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlString.trim();
+                itemContainer.appendChild(tempDiv.firstChild);
+            });
+
+            // E. Gabungkan
+            dateGroup.appendChild(itemContainer);
+            mainContainer.appendChild(dateGroup);
         });
+    }
+
+    // --- Helper: Grouping Logic ---
+    _groupByDate(data) {
+        return data.reduce((groups, item) => {
+            const date = item.dateStr; // Menggunakan string tanggal yang sudah diformat
+            if (!groups[date]) {
+                groups[date] = [];
+            }
+            groups[date].push(item);
+            return groups;
+        }, {});
     }
 
     // --- TEMPLATE 1: Tampilan KARTU (Card) ---
@@ -36,7 +72,6 @@ class WeatherViewModel {
         return `
         <div class="weather-card ${weatherClass}">
             <div class="card-header">
-                <span class="card-date">${fc.dateStr}</span>
                 <span class="card-time">🕒 ${fc.timeStr} WIB</span>
             </div>
             
@@ -65,7 +100,6 @@ class WeatherViewModel {
         <div class="weather-list-item ${weatherClass}">
             <div class="list-left">
                 <span class="list-time">${fc.timeStr}</span>
-                <span class="list-date">${fc.dateStr}</span>
             </div>
             
             <div class="list-center">
@@ -85,7 +119,6 @@ class WeatherViewModel {
     }
 
     // --- Helpers (Private) ---
-    
     _getIconHtml(fc) {
         if (fc.iconUrl) {
             return `<img src="${fc.iconUrl}" alt="${fc.condition}" class="weather-icon-img" onerror="this.style.display='none'">`;
