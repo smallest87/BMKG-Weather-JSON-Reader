@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Cuaca Universal (ViewModel)</title>
+    <title>Monitor Cuaca Universal + Grafik</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -29,16 +32,37 @@
         .view-btn { background: #eee; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 1.2em; transition: 0.2s; }
         .view-btn.active { background: var(--secondary-color); color: white; }
         .view-btn:hover { background: #ddd; }
-        .view-btn.active:hover { background: #2980b9; }
 
         /* Region Info */
         .region-info { background: linear-gradient(135deg, #2980b9, #3498db); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(41, 128, 185, 0.3); }
         .region-info.desa-mode { background: linear-gradient(135deg, #27ae60, #2ecc71); }
         .region-meta { display: flex; gap: 20px; font-size: 0.85em; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px; width: fit-content; margin-top: 10px;}
 
-        /* --- LAYOUT 1: GRID (CARD) --- */
+        /* --- CHART CONTAINER (BARU) --- */
+        .chart-wrapper {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+            position: relative;
+            height: 300px; /* Tinggi Chart Tetap */
+        }
+
+        /* --- GROUPING TANGGAL --- */
+        .date-group { margin-bottom: 30px; animation: fadeIn 0.5s ease-in; }
+        .date-header {
+            background-color: var(--primary-color); color: white; padding: 10px 15px;
+            border-radius: 8px; margin-bottom: 15px; font-size: 1.1em;
+            display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky; top: 10px; z-index: 10;
+        }
+
+        /* --- LAYOUTS --- */
         .forecast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-        
+        .forecast-list-container { display: flex; flex-direction: column; gap: 10px; }
+
+        /* --- CARD STYLE --- */
         .weather-card {
             background: var(--card-bg); border-radius: 12px; padding: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s;
@@ -46,10 +70,7 @@
             border-left: 5px solid #bdc3c7;
         }
         .weather-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        
-        /* Card Internals */
         .card-header { font-size: 0.9em; color: #7f8c8d; margin-bottom: 10px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; }
-        .card-date { display: block; font-weight: bold; color: #2c3e50; }
         .card-time { font-size: 0.9em; color: #e67e22; font-weight: 600; }
         .main-weather { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; }
         .temp-display { font-size: 2em; font-weight: bold; color: #333; }
@@ -57,9 +78,7 @@
         .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em; color: #666; background: #f8f9fa; padding: 10px; border-radius: 8px; }
         .detail-item span { display: block; color: #999; font-size: 0.8em; margin-bottom: 2px;}
 
-        /* --- LAYOUT 2: LIST (BARIS) --- */
-        .forecast-list-container { display: flex; flex-direction: column; gap: 10px; }
-
+        /* --- LIST STYLE --- */
         .weather-list-item {
             background: white; border-radius: 8px; padding: 10px 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex;
@@ -68,23 +87,17 @@
             flex-wrap: wrap; gap: 15px;
         }
         .weather-list-item:hover { transform: translateX(5px); }
-
         .list-left { min-width: 100px; }
         .list-time { display: block; font-weight: bold; color: #e67e22; font-size: 1.1em; }
-        .list-date { font-size: 0.85em; color: #7f8c8d; }
-
         .list-center { display: flex; align-items: center; gap: 15px; flex-grow: 1; }
         .list-temp-group { display: flex; flex-direction: column; }
         .list-temp { font-size: 1.4em; font-weight: bold; color: #333; }
-        .list-condition { font-size: 0.9em; color: #666; }
-
         .list-right { display: flex; gap: 20px; font-size: 0.9em; color: #555; flex-wrap: wrap; }
         .list-stat { background: #f8f9fa; padding: 5px 10px; border-radius: 15px; }
 
-        /* Icons & Colors (Shared) */
+        /* Icons & Colors */
         .weather-icon-img { width: 50px; height: 50px; object-fit: contain; }
         .weather-icon-display { font-size: 2em; }
-        
         .rain { border-left-color: #3498db !important; }
         .cloudy { border-left-color: #95a5a6 !important; }
         .sunny { border-left-color: #f1c40f !important; }
@@ -92,40 +105,8 @@
         .fog { border-left-color: #bdc3c7 !important; }
         .thunder { border-left-color: #8e44ad !important; }
 
-        @media (max-width: 600px) {
-            .weather-list-item { flex-direction: column; align-items: flex-start; }
-            .list-right { width: 100%; justify-content: space-between; }
-        }
-
-        /* --- Styles untuk Grouping Tanggal (Baru) --- */
-        .date-group {
-            margin-bottom: 30px;
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        .date-header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 1.1em;
-            display: inline-block;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 10px;
-            z-index: 10;
-        }
-
-        /* Update sedikit pada card agar tanggal tidak redundan */
-        .card-date { display: none; } /* Sembunyikan tanggal di card karena sudah ada di header */
-        .list-date { display: none; } /* Sembunyikan tanggal di list */
-        
-        /* Animasi halus saat render */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 600px) { .weather-list-item { flex-direction: column; align-items: flex-start; } .list-right { width: 100%; justify-content: space-between; } }
     </style>
 </head>
 <body>
@@ -154,6 +135,11 @@
 
         <div id="contentArea">
             <div id="regionInfo" class="region-info" style="display:none;"></div>
+            
+            <div class="chart-wrapper">
+                <canvas id="weatherChart"></canvas>
+            </div>
+
             <div id="forecastContainer"></div>
         </div>
     </div>
@@ -163,12 +149,10 @@
     <script>
         let weatherData = [];
         let uiMode = 'KECAMATAN';
-        let currentRegionData = null; // Menyimpan data wilayah yang sedang dipilih
+        let currentRegionData = null;
         
-        // Inisialisasi ViewModel
         const viewModel = new WeatherViewModel();
 
-        // 1. Handle File Upload
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -187,22 +171,19 @@
             reader.readAsText(file);
         });
 
-        // 2. Fungsi Ganti Tampilan (Dipanggil tombol)
         function switchView(mode) {
-            // Update UI Button Active State
             document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
             if(mode === 'CARD') document.querySelector('.view-btn[title="Tampilan Kartu"]').classList.add('active');
             else document.querySelector('.view-btn[title="Tampilan Daftar"]').classList.add('active');
 
-            // Update ViewModel & Re-render jika ada data
             viewModel.setViewMode(mode);
             if (currentRegionData) {
                 const standardizedData = normalizeForecastData(currentRegionData.prakiraan);
-                viewModel.render('forecastContainer', standardizedData);
+                // UPDATE: Kirim ID container data DAN ID canvas
+                viewModel.render('forecastContainer', 'weatherChart', standardizedData);
             }
         }
 
-        // 3. Deteksi Tema UI
         function detectUiTheme() {
             if (weatherData.length > 0) {
                 const sample = weatherData[0];
@@ -214,7 +195,6 @@
             }
         }
 
-        // 4. Inisialisasi Dashboard
         function initDashboard() {
             document.getElementById('uploadSection').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
@@ -233,13 +213,12 @@
 
             select.addEventListener('change', (e) => {
                 if(e.target.value !== "") {
-                    // Simpan data terpilih ke variabel global
                     currentRegionData = weatherData[e.target.value];
                     renderHeader(currentRegionData);
                     
-                    // Render isi menggunakan ViewModel
                     const standardizedData = normalizeForecastData(currentRegionData.prakiraan);
-                    viewModel.render('forecastContainer', standardizedData);
+                    // UPDATE: Render dengan Grafik
+                    viewModel.render('forecastContainer', 'weatherChart', standardizedData);
                 } else {
                     document.getElementById('regionInfo').style.display = 'none';
                     document.getElementById('forecastContainer').innerHTML = '';
@@ -253,37 +232,22 @@
             }
         }
 
-        // 5. Render Header Info (Masih di main script karena ini statis)
         function renderHeader(data) {
             const regionInfo = document.getElementById('regionInfo');
             const titleElement = document.getElementById('mainTitle');
-            
             regionInfo.style.display = 'block';
             
             if (uiMode === 'DESA') {
                 regionInfo.className = 'region-info desa-mode';
                 titleElement.innerText = `🌤️ ${data.administrasi.desa || data.wilayah}`;
-                regionInfo.innerHTML = `
-                    <h2>📍 ${data.administrasi.desa || data.wilayah}</h2>
-                    <div class="region-meta">
-                        <div>Kec. ${data.administrasi.kecamatan}</div>
-                        <div>${data.administrasi.kotkab}</div>
-                    </div>
-                `;
+                regionInfo.innerHTML = `<h2>📍 ${data.administrasi.desa || data.wilayah}</h2><div class="region-meta"><div>Kec. ${data.administrasi.kecamatan}</div><div>${data.administrasi.kotkab}</div></div>`;
             } else {
                 regionInfo.className = 'region-info';
                 titleElement.innerText = `🌤️ ${data.wilayah}`;
-                regionInfo.innerHTML = `
-                    <h2>📍 ${data.wilayah}</h2>
-                    <div class="region-meta">
-                        <div>Kecamatan: ${data.administrasi.kecamatan || data.wilayah}</div>
-                        <div>${data.administrasi.kotkab}</div>
-                    </div>
-                `;
+                regionInfo.innerHTML = `<h2>📍 ${data.wilayah}</h2><div class="region-meta"><div>Kecamatan: ${data.administrasi.kecamatan || data.wilayah}</div><div>${data.administrasi.kotkab}</div></div>`;
             }
         }
 
-        // 6. Data Normalizer (Penting agar ViewModel terima data bersih)
         function normalizeForecastData(prakiraanRaw) {
             let results = [];
             let isNested = false;
