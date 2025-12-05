@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Cuaca Desa - BMKG</title>
+    <style>
+        :root {
+            --primary-color: #27ae60; /* Hijau untuk nuansa Desa */
+            --secondary-color: #2ecc71;
+            --accent-color: #e67e22;
+            --bg-color: #f0f3f4;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* --- Upload Section --- */
+        .upload-container {
+            text-align: center;
+            padding: 40px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto 20px auto;
+        }
+
+        .upload-container h2 { margin-top: 0; }
+
+        input[type="file"] {
+            margin-top: 15px;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* --- Dashboard (Hidden by default) --- */
+        #dashboard { display: none; }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-left: 5px solid var(--primary-color);
+        }
+
+        #mainTitle { margin: 0; font-size: 1.5em; }
+
+        .select-wrapper { flex-grow: 1; max-width: 300px; }
+        
+        select { 
+            width: 100%; 
+            padding: 10px; 
+            border-radius: 6px; 
+            border: 1px solid #ccc; 
+            font-size: 16px; 
+        }
+
+        /* --- Region Info Box --- */
+        .region-info {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .region-info h2 { margin: 0 0 5px 0; }
+        .region-breadcrumbs { font-size: 0.9em; opacity: 0.9; margin-bottom: 10px; }
+        .region-meta { 
+            display: flex; 
+            gap: 20px; 
+            font-size: 0.85em; 
+            background: rgba(0,0,0,0.1); 
+            padding: 10px; 
+            border-radius: 8px; 
+            width: fit-content;
+        }
+
+        /* --- Grid Layout --- */
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        /* --- Weather Card Base Style --- */
+        .weather-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            
+            /* Default border (abu muda) sebelum class JS masuk */
+            border-left: 5px solid #bdc3c7; 
+        }
+
+        .weather-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+        }
+
+        /* --- Dynamic Border Colors (Sesuai Cuaca) --- */
+        .weather-card.rain { border-left-color: #3498db; }    /* Biru Hujan */
+        .weather-card.cloudy { border-left-color: #95a5a6; }  /* Abu Berawan */
+        .weather-card.sunny { border-left-color: #f1c40f; }   /* Kuning Cerah */
+        .weather-card.clear { border-left-color: #f39c12; }   /* Oranye Jernih */
+        .weather-card.fog { border-left-color: #bdc3c7; }     /* Abu Muda Kabut */
+        .weather-card.thunder { border-left-color: #8e44ad; } /* Ungu Petir */
+
+
+        /* --- Card Content --- */
+        .card-header {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 8px;
+        }
+
+        .card-date { display: block; font-weight: bold; color: var(--primary-color); }
+        .card-time { font-size: 0.9em; color: #e67e22; font-weight: 600; }
+
+        .main-weather {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+
+        .weather-icon-img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+        }
+
+        .temp-display { font-size: 2em; font-weight: bold; color: #333; }
+        .condition-text { font-weight: 500; color: #555; margin-bottom: 15px; text-transform: capitalize; }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.85em;
+            color: #666;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .detail-item span { display: block; color: #999; font-size: 0.8em; margin-bottom: 2px;}
+
+        @media (max-width: 600px) {
+            .header-bar { flex-direction: column; align-items: stretch; }
+            .select-wrapper { max-width: 100%; }
+            .region-meta { flex-direction: column; gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-container" id="uploadSection">
+        <h2>📂 Buka Data Cuaca Desa</h2>
+        <p>Pilih file JSON struktur Desa (contoh: <code>Sedayu.json</code>)</p>
+        <input type="file" id="fileInput" accept=".json">
+    </div>
+
+    <div id="dashboard">
+        <div class="header-bar">
+            <h3 id="mainTitle">🌤️ Cuaca Desa</h3>
+            <div class="select-wrapper">
+                <select id="regionSelect">
+                    <option value="">-- Pilih Desa --</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="contentArea">
+            <div id="regionInfo" class="region-info" style="display:none;"></div>
+            <div id="forecastGrid" class="forecast-grid"></div>
+        </div>
+    </div>
+
+    <script src="script_desa.js"></script>
+</body>
+</html>
