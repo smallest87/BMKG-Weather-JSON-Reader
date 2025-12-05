@@ -13,8 +13,10 @@ class WeatherViewModel {
         mainContainer.innerHTML = ''; 
         mainContainer.className = ''; 
 
+        // 1. Render Grafik
         this.renderChart(chartId, data, metric);
 
+        // 2. Render List/Grid (Grouping Tanggal)
         const groupedData = this._groupByDate(data);
 
         Object.keys(groupedData).forEach(dateKey => {
@@ -58,8 +60,7 @@ class WeatherViewModel {
             return `${shortDate} ${d.timeStr}`;
         });
 
-        // 1. Cek Ketersediaan Data Min/Max
-        // Data dikatakan punya Min/Max jika nilai min tidak sama dengan max
+        // Cek Ketersediaan Data Min/Max
         const hasTempMinMax = data.length > 0 && 
                               data[0].raw.temp_min !== undefined && 
                               data[0].raw.temp_min !== data[0].raw.temp_max;
@@ -70,15 +71,13 @@ class WeatherViewModel {
 
         let datasets = [];
 
-        // 2. Logika Conditional Rendering Dataset
-        
-        // KASUS A: SUHU dengan Min/Max
+        // Konfigurasi Dataset (Sama seperti sebelumnya)
         if (metric === 'temp' && hasTempMinMax) {
             datasets = [
                 {
                     label: 'Suhu Max (°C)',
                     data: data.map(d => d.raw.temp_max),
-                    borderColor: '#e74c3c', // Merah
+                    borderColor: '#e74c3c',
                     backgroundColor: 'rgba(231, 76, 60, 0.1)',
                     borderWidth: 2,
                     pointBackgroundColor: '#fff',
@@ -90,7 +89,7 @@ class WeatherViewModel {
                 {
                     label: 'Suhu Min (°C)',
                     data: data.map(d => d.raw.temp_min),
-                    borderColor: '#3498db', // Biru
+                    borderColor: '#3498db',
                     backgroundColor: 'rgba(52, 152, 219, 0.1)',
                     borderWidth: 2,
                     pointBackgroundColor: '#fff',
@@ -100,14 +99,12 @@ class WeatherViewModel {
                     fill: false
                 }
             ];
-        } 
-        // KASUS B: KELEMBAPAN dengan Min/Max
-        else if (metric === 'humidity' && hasHumidMinMax) {
+        } else if (metric === 'humidity' && hasHumidMinMax) {
             datasets = [
                 {
                     label: 'Kelembapan Max (%)',
                     data: data.map(d => d.raw.humidity_max),
-                    borderColor: '#2980b9', // Biru Tua
+                    borderColor: '#2980b9',
                     backgroundColor: 'rgba(41, 128, 185, 0.1)',
                     borderWidth: 2,
                     pointBackgroundColor: '#fff',
@@ -119,7 +116,7 @@ class WeatherViewModel {
                 {
                     label: 'Kelembapan Min (%)',
                     data: data.map(d => d.raw.humidity_min),
-                    borderColor: '#1abc9c', // Tosca / Biru Laut
+                    borderColor: '#1abc9c',
                     backgroundColor: 'rgba(26, 188, 156, 0.1)',
                     borderWidth: 2,
                     pointBackgroundColor: '#fff',
@@ -129,9 +126,7 @@ class WeatherViewModel {
                     fill: false
                 }
             ];
-        }
-        // KASUS C: Standard (Satu Garis)
-        else {
+        } else {
             const metricsConfig = {
                 'temp': { label: 'Suhu (°C)', color: '#e67e22', bg: 'rgba(230, 126, 34, 0.1)', key: 'temp' },
                 'humidity': { label: 'Kelembapan (%)', color: '#3498db', bg: 'rgba(52, 152, 219, 0.1)', key: 'humidity' },
@@ -163,12 +158,75 @@ class WeatherViewModel {
             }];
         }
 
+        // --- PLUGIN ARSIRAN AREA (BARU) ---
+        const predictionAreaPlugin = {
+            id: 'predictionArea',
+            beforeDraw: (chart) => {
+                const { ctx, chartArea: { top, bottom, left, right, width, height }, scales: { x } } = chart;
+                
+                // 1. Tentukan Tanggal Dasar (Hari Pertama dalam Data)
+                // Kita gunakan data pertama sebagai "Hari Ini" agar logika arsiran terlihat
+                if (data.length === 0) return;
+                const baseDateStr = new Date(data[0].rawDate).toDateString();
+
+                // 2. Cari titik di mana tanggal berubah
+                let startPixel = null;
+
+                // Loop dataset meta untuk mencari koordinat X
+                const meta = chart.getDatasetMeta(0);
+                
+                for (let i = 1; i < data.length; i++) {
+                    const currentDateStr = new Date(data[i].rawDate).toDateString();
+                    
+                    // Jika tanggal data ini BEDA dengan tanggal dasar
+                    if (currentDateStr !== baseDateStr) {
+                        // Ambil posisi X dari data point sebelumnya dan sekarang
+                        // Kita mulai arsiran di tengah-tengah antara hari ini dan besok
+                        const prevX = meta.data[i-1].x;
+                        const currX = meta.data[i].x;
+                        
+                        startPixel = (prevX + currX) / 2;
+                        break; // Kita sudah nemu titik awalnya, stop loop
+                    }
+                }
+
+                // 3. Gambar Arsiran
+                if (startPixel !== null) {
+                    ctx.save();
+                    
+                    // Gambar Kotak Abu-abu
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.04)'; // Warna abu transparan
+                    // Gambar dari startPixel sampai ujung kanan chart
+                    ctx.fillRect(startPixel, top, right - startPixel, height);
+
+                    // Tambah Garis Vertikal Pembatas (Opsional)
+                    ctx.beginPath();
+                    ctx.moveTo(startPixel, top);
+                    ctx.lineTo(startPixel, bottom);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+
+                    // Tambah Label "Prediksi"
+                    ctx.font = 'bold 12px "Segoe UI", sans-serif';
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                    ctx.textAlign = 'left';
+                    ctx.fillText("PREDIKSI (Hari Berikutnya)", startPixel + 10, top + 20);
+
+                    ctx.restore();
+                }
+            }
+        };
+
         this.chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: datasets
             },
+            // Masukkan Plugin ke sini
+            plugins: [predictionAreaPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
