@@ -215,10 +215,11 @@
                             iconUrl: item.image,
                             raw: {
                                 temp: item.t,
-                                // Data Desa jarang ada min/max terpisah, kita biarkan undefined atau sama dengan t
-                                temp_min: item.t, 
+                                temp_min: item.t,
                                 temp_max: item.t,
                                 humidity: item.hu,
+                                humidity_min: item.hu, // Default
+                                humidity_max: item.hu, // Default
                                 wind: item.ws,
                                 clouds: item.tcc,
                                 visibility: item.vs
@@ -241,12 +242,14 @@
                         clouds: item.tcc,
                         visibility: item.vs_text ? item.vs_text : (item.vs ? (item.vs / 1000).toFixed(1) + ' km' : '-'),
                         iconUrl: item.image || null,
-                        // UPDATE: Ambil min dan max untuk grafik
+                        // UPDATE: Menyimpan Min/Max untuk Suhu DAN Kelembapan
                         raw: {
                             temp: item.suhu_max || item.t,
-                            temp_min: item.suhu_min, // Properti Penting untuk Dual Line
-                            temp_max: item.suhu_max, // Properti Penting untuk Dual Line
+                            temp_min: item.suhu_min,
+                            temp_max: item.suhu_max,
                             humidity: item.kelembapan_max || item.hu,
+                            humidity_min: item.kelembapan_min, // Properti Penting Kelembapan
+                            humidity_max: item.kelembapan_max, // Properti Penting Kelembapan
                             wind: item.kecepatan_angin || item.ws,
                             clouds: item.tcc,
                             visibility: vsVal

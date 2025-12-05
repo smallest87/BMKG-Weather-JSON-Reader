@@ -13,10 +13,8 @@ class WeatherViewModel {
         mainContainer.innerHTML = ''; 
         mainContainer.className = ''; 
 
-        // 1. Render Grafik
         this.renderChart(chartId, data, metric);
 
-        // 2. Render List/Grid (Grouping Tanggal)
         const groupedData = this._groupByDate(data);
 
         Object.keys(groupedData).forEach(dateKey => {
@@ -60,24 +58,26 @@ class WeatherViewModel {
             return `${shortDate} ${d.timeStr}`;
         });
 
-        // Cek apakah data ini punya Min & Max (biasanya data Kecamatan)
-        // Data Desa biasanya hanya per jam (satu suhu), jadi temp_min undefined atau sama dengan temp_max
-        const hasMinMax = data.length > 0 && 
-                          data[0].raw.temp_min !== undefined && 
-                          data[0].raw.temp_max !== undefined &&
-                          data[0].raw.temp_min !== data[0].raw.temp_max; // Pastikan beda
+        // 1. Cek Ketersediaan Data Min/Max
+        // Data dikatakan punya Min/Max jika nilai min tidak sama dengan max
+        const hasTempMinMax = data.length > 0 && 
+                              data[0].raw.temp_min !== undefined && 
+                              data[0].raw.temp_min !== data[0].raw.temp_max;
+
+        const hasHumidMinMax = data.length > 0 && 
+                               data[0].raw.humidity_min !== undefined && 
+                               data[0].raw.humidity_min !== data[0].raw.humidity_max;
 
         let datasets = [];
 
-        // Logika Khusus untuk SUHU dengan Min/Max
-        if (metric === 'temp' && hasMinMax) {
-            const maxTemps = data.map(d => d.raw.temp_max);
-            const minTemps = data.map(d => d.raw.temp_min);
-
+        // 2. Logika Conditional Rendering Dataset
+        
+        // KASUS A: SUHU dengan Min/Max
+        if (metric === 'temp' && hasTempMinMax) {
             datasets = [
                 {
                     label: 'Suhu Max (°C)',
-                    data: maxTemps,
+                    data: data.map(d => d.raw.temp_max),
                     borderColor: '#e74c3c', // Merah
                     backgroundColor: 'rgba(231, 76, 60, 0.1)',
                     borderWidth: 2,
@@ -89,7 +89,7 @@ class WeatherViewModel {
                 },
                 {
                     label: 'Suhu Min (°C)',
-                    data: minTemps,
+                    data: data.map(d => d.raw.temp_min),
                     borderColor: '#3498db', // Biru
                     backgroundColor: 'rgba(52, 152, 219, 0.1)',
                     borderWidth: 2,
@@ -100,8 +100,38 @@ class WeatherViewModel {
                     fill: false
                 }
             ];
-        } else {
-            // Logika Standard (Satu Garis)
+        } 
+        // KASUS B: KELEMBAPAN dengan Min/Max
+        else if (metric === 'humidity' && hasHumidMinMax) {
+            datasets = [
+                {
+                    label: 'Kelembapan Max (%)',
+                    data: data.map(d => d.raw.humidity_max),
+                    borderColor: '#2980b9', // Biru Tua
+                    backgroundColor: 'rgba(41, 128, 185, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#2980b9',
+                    pointRadius: 4,
+                    tension: 0.4,
+                    fill: false
+                },
+                {
+                    label: 'Kelembapan Min (%)',
+                    data: data.map(d => d.raw.humidity_min),
+                    borderColor: '#1abc9c', // Tosca / Biru Laut
+                    backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#1abc9c',
+                    pointRadius: 4,
+                    tension: 0.4,
+                    fill: false
+                }
+            ];
+        }
+        // KASUS C: Standard (Satu Garis)
+        else {
             const metricsConfig = {
                 'temp': { label: 'Suhu (°C)', color: '#e67e22', bg: 'rgba(230, 126, 34, 0.1)', key: 'temp' },
                 'humidity': { label: 'Kelembapan (%)', color: '#3498db', bg: 'rgba(52, 152, 219, 0.1)', key: 'humidity' },
